@@ -6,7 +6,9 @@
 #   ROOT_FLAVOR=none       -> no root (clean kernel, still gets Droidspaces)
 #
 # Facts this encodes (verified against the upstream repos, see docs/RESEARCH.md):
-#  * KernelSU-Next branches are stable/dev/legacy — there is NO `next` branch, and
+#  * KernelSU-Next branches: only `dev` (default) still exists upstream; `stable`
+#    was deleted in 2025 (a 404 body piped into bash = exit 127). There is no `next`
+#    branch, and
 #    v3.x Kconfig exposes only KSU / KSU_DEBUG / KSU_DISABLE_MANAGER / KSU_DISABLE_POLICY.
 #    The old CONFIG_KSU_MANUAL_HOOK / KSU_KPROBES_HOOK选择 no longer exists: v3.x ships
 #    kernel/hook/{lsm_hook,syscall_hook,setuid_hook}.c plus a runtime symbol_resolver
@@ -127,7 +129,7 @@ case "$ROOT_FLAVOR" in
     prime_clone https://github.com/KernelSU-Next/KernelSU-Next KernelSU-Next
     # setup.sh detects common/drivers, clones into ./KernelSU-Next, symlinks
     # drivers/kernelsu and edits drivers/{Makefile,Kconfig}.
-    curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/stable/kernel/setup.sh" \
+    curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/dev/kernel/setup.sh" \
         | bash -s ${KSU_REF:+"$KSU_REF"}
     KSU_DIR="$KROOT/KernelSU-Next"
     refresh_cache KernelSU-Next
