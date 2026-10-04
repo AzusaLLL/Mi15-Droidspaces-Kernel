@@ -1,7 +1,8 @@
 name: Build Mi15 Droidspaces Kernel
 
 # Xiaomi 15 (dada, sm8750) - GKI android15-6.6 / KMI android15-8 / 4K pages
-# Stock reference: 6.6.118-android15-8-gb9cc6ec16bc8-abogki536571621-4k
+# Stock reference, on-device verified 2026-10-05: 6.6.77-android15-8-gf9a1d4bd8353-abogki440974771-4k
+# (6.6.118-android15-8-gb9cc6ec16bc8-abogki536571621-4k is a different OS4 dump, not this device)
 
 permissions:
   contents: write
@@ -13,6 +14,9 @@ on:
         description: "GKI source tag (sublevel). 118 = matches stock exactly"
         type: choice
         options:
+          # 2025-03 is 6.6.77: the exact sublevel of the device stock kernel
+          # (uname -r: 6.6.77-android15-8-...-abogki440974771-4k on OS4.0.0.20.XPBCNXM).
+          - android15-6.6-2025-03_r1   # 6.6.77  <- matches device stock
           # r37 is 6.6.118 like r1, but 36 revisions newer: the 2026-01 branch
           # freezes SUBLEVEL while continuing to backport. Stock was built
           # 2026-07-20, between r37 (07-15) and r38 (07-29), so r37/r38 is the
@@ -23,7 +27,7 @@ on:
           - android15-6.6-2026-01_r1   # 6.6.118  (Jan code, hangs on OS4)
           - android15-6.6-2026-04_r1   # 6.6.127  (drops 4 mmc hooks)
           - android15-6.6-2026-07_r1   # 6.6.139  (drops 4 mmc hooks)
-        default: android15-6.6-2026-01_r37
+        default: android15-6.6-2025-03_r1
       root_flavor:
         description: "Root solution"
         type: choice
