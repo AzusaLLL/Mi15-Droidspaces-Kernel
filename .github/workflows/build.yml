@@ -300,8 +300,9 @@ jobs:
           # vmlinux/System.map carry the complete uncompressed symbol names;
           # Image strings are retained as a fallback for layouts that omit them.
           if [ -d ~/gki/bazel-bin ]; then
-            SYMBOL_SOURCE="$(find ~/gki/bazel-bin -type f \( -name vmlinux -o -name System.map \) -print -quit 2>/dev/null || true)"
+            SYMBOL_SOURCE="$(find -L ~/gki/bazel-bin -type f \( -name vmlinux -o -name System.map \) -print -quit 2>/dev/null || true)"
           fi
+          [ -n "$SYMBOL_SOURCE" ] || { echo "::error::vmlinux/System.map not found; refusing an incomplete hook ABI check"; exit 1; }
           ./scripts/verify-vendor-hooks.sh "${{ steps.verify.outputs.image }}" "" "$SYMBOL_SOURCE"
 
       - name: Package artifacts
