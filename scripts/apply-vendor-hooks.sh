@@ -5,7 +5,7 @@ KDIR="${1:?usage: apply-vendor-hooks.sh <kernel-dir> [patch-file]}"
 PATCH="${2:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../patches/vendor-hooks" && pwd)/001-mi15-android15-8-mm-vendor-hooks.patch}"
 [ -d "$KDIR" ] || { echo "::error::kernel tree not found: $KDIR"; exit 1; }
 [ -s "$PATCH" ] || { echo "::error::vendor hook patch not found: $PATCH"; exit 1; }
-git -C "$KDIR" diff --quiet -- include/trace/hooks drivers/android/vendor_hooks.c kernel/sched/vendor_hooks.c \
+git -C "$KDIR" diff --quiet HEAD -- include/trace/hooks drivers/android/vendor_hooks.c kernel/sched/vendor_hooks.c \
   mm/madvise.c mm/memcontrol.c mm/page_alloc.c mm/vmscan.c mm/filemap.c mm/swap.c mm/rmap.c \
   block/blk-mq.c kernel/fork.c include/linux/mm_inline.h \
   || { echo "::error::vendor hook targets already modified; refusing a mixed apply"; exit 1; }
