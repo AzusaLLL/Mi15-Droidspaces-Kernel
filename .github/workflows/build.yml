@@ -152,9 +152,9 @@ jobs:
           # Every input that changes generated code belongs in this key, otherwise a
           # stale object could be reused across differing configurations.
           key: >-
-            bazel-${{ inputs.kernel_tag }}-${{ steps.res.outputs.root_key }}-ds${{ inputs.use_droidspaces }}-susfs${{ inputs.use_susfs }}-kpm${{ inputs.use_kpm }}-${{ hashFiles('scripts/*.sh', 'patches/droidspaces/*', 'patches/erofs/*') }}-${{ github.run_id }}
+            bazel-${{ inputs.kernel_tag }}-${{ steps.res.outputs.root_key }}-ds${{ inputs.use_droidspaces }}-susfs${{ inputs.use_susfs }}-kpm${{ inputs.use_kpm }}-${{ hashFiles('scripts/*.sh', 'patches/droidspaces/*', 'patches/erofs/*', 'patches/vendor-hooks/*') }}-${{ github.run_id }}
           restore-keys: |
-            bazel-${{ inputs.kernel_tag }}-${{ steps.res.outputs.root_key }}-ds${{ inputs.use_droidspaces }}-susfs${{ inputs.use_susfs }}-kpm${{ inputs.use_kpm }}-${{ hashFiles('scripts/*.sh', 'patches/droidspaces/*', 'patches/erofs/*') }}-
+            bazel-${{ inputs.kernel_tag }}-${{ steps.res.outputs.root_key }}-ds${{ inputs.use_droidspaces }}-susfs${{ inputs.use_susfs }}-kpm${{ inputs.use_kpm }}-${{ hashFiles('scripts/*.sh', 'patches/droidspaces/*', 'patches/erofs/*', 'patches/vendor-hooks/*') }}-
             bazel-${{ inputs.kernel_tag }}-${{ steps.res.outputs.root_key }}-ds${{ inputs.use_droidspaces }}-susfs${{ inputs.use_susfs }}-kpm${{ inputs.use_kpm }}-
             bazel-${{ inputs.kernel_tag }}-${{ steps.res.outputs.root_key }}-
 
@@ -237,6 +237,12 @@ jobs:
             ~/gki/common/fs/erofs/decompressor.c
           git -C ~/gki/common diff --check
 
+      # Xiaomi's vendor_dlkm is built against these Android vendor trace hooks.
+      # Keep this as a hook-only backport; the reference vendor tree also carries
+      # unrelated MM, folio, and page-size changes that must not enter this build.
+      - name: Apply Mi15 vendor trace hooks
+        run: ./scripts/apply-vendor-hooks.sh ~/gki/common
+
       - name: Apply Droidspaces
         if: ${{ inputs.use_droidspaces }}
         run: ./scripts/apply-droidspaces.sh ~/gki/common
@@ -287,6 +293,17 @@ jobs:
           USE_DROIDSPACES: ${{ inputs.use_droidspaces }}
         run: ./scripts/verify-build.sh ~/gki
 
+      - name: Verify Mi15 vendor trace hook ABI
+        run: |
+          set -e
+          SYMBOL_SOURCE=""
+          # vmlinux/System.map carry the complete uncompressed symbol names;
+          # Image strings are retained as a fallback for layouts that omit them.
+          if [ -d ~/gki/bazel-bin ]; then
+            SYMBOL_SOURCE="$(find ~/gki/bazel-bin -type f \( -name vmlinux -o -name System.map \) -print -quit 2>/dev/null || true)"
+          fi
+          ./scripts/verify-vendor-hooks.sh "${{ steps.verify.outputs.image }}" "" "$SYMBOL_SOURCE"
+
       - name: Package artifacts
         env:
           IMAGE: ${{ steps.verify.outputs.image }}
@@ -336,7 +353,7 @@ jobs:
         with:
           path: ~/.cache/bazel-disk
           key: >-
-            bazel-${{ inputs.kernel_tag }}-${{ steps.res.outputs.root_key }}-ds${{ inputs.use_droidspaces }}-susfs${{ inputs.use_susfs }}-kpm${{ inputs.use_kpm }}-${{ hashFiles('scripts/*.sh', 'patches/droidspaces/*', 'patches/erofs/*') }}-${{ github.run_id }}
+            bazel-${{ inputs.kernel_tag }}-${{ steps.res.outputs.root_key }}-ds${{ inputs.use_droidspaces }}-susfs${{ inputs.use_susfs }}-kpm${{ inputs.use_kpm }}-${{ hashFiles('scripts/*.sh', 'patches/droidspaces/*', 'patches/erofs/*', 'patches/vendor-hooks/*') }}-${{ github.run_id }}
 
       # Run-unique keys accumulate, and a repo only gets 10GB of cache before GitHub
       # starts evicting by LRU - which could evict the git mirror we want to keep.

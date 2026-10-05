@@ -1,0 +1,385 @@
+--- a/include/trace/hooks/madvise.h
++++ b/include/trace/hooks/madvise.h
+@@ -11,6 +11,10 @@
+ 	TP_PROTO(int pidfd, const struct iovec __user *vec, size_t vlen,
+ 		int behavior, unsigned int flags, ssize_t *ret, bool *bypass),
+ 	TP_ARGS(pidfd, vec, vlen, behavior, flags, ret, bypass), 1);
++DECLARE_RESTRICTED_HOOK(android_rvh_do_madvise_bypass,
++	TP_PROTO(struct mm_struct *mm, unsigned long start,
++		size_t len_in, int behavior, int *ret, bool *bypass),
++	TP_ARGS(mm, start, len_in, behavior, ret, bypass), 1);
+ struct vm_area_struct;
+ DECLARE_HOOK(android_vh_update_vma_flags,
+ 	TP_PROTO(struct vm_area_struct *vma),
+--- a/include/trace/hooks/mm.h
++++ b/include/trace/hooks/mm.h
+@@ -21,6 +21,14 @@
+ DECLARE_RESTRICTED_HOOK(android_rvh_shmem_get_folio,
+ 			TP_PROTO(struct shmem_inode_info *info, struct folio **folio),
+ 			TP_ARGS(info, folio), 2);
++DECLARE_RESTRICTED_HOOK(android_rvh_perform_reclaim,
++			TP_PROTO(int order, gfp_t gfp_mask, nodemask_t *nodemask,
++				 unsigned long *progress, bool *skip),
++			TP_ARGS(order, gfp_mask, nodemask, progress, skip), 4);
++DECLARE_RESTRICTED_HOOK(android_rvh_do_traversal_lruvec_ex,
++			TP_PROTO(struct mem_cgroup *memcg, struct lruvec *lruvec,
++				 bool *stop),
++			TP_ARGS(memcg, lruvec, stop), 3);
+ DECLARE_HOOK(android_vh_shmem_mod_shmem,
+ 	TP_PROTO(struct address_space *mapping, long nr_pages),
+ 	TP_ARGS(mapping, nr_pages));
+@@ -397,6 +405,9 @@
+ 	TP_PROTO(struct address_space *mapping, struct folio *folio,
+ 		struct file *file),
+ 	TP_ARGS(mapping, folio, file));
++DECLARE_HOOK(android_vh_filemap_pages,
++	TP_PROTO(struct folio *folio),
++	TP_ARGS(folio));
+ 
+ DECLARE_HOOK(android_vh_lruvec_add_folio,
+ 	TP_PROTO(struct lruvec *lruvec, struct folio *folio, enum lru_list lru,
+@@ -407,6 +418,12 @@
+ 	TP_PROTO(struct lruvec *lruvec, struct folio *folio, enum lru_list lru,
+ 		bool *skip),
+ 	TP_ARGS(lruvec, folio, lru, skip));
++DECLARE_HOOK(android_vh_lru_gen_add_folio_skip,
++	TP_PROTO(struct lruvec *lruvec, struct folio *folio, bool *skip),
++	TP_ARGS(lruvec, folio, skip));
++DECLARE_HOOK(android_vh_lru_gen_del_folio_skip,
++	TP_PROTO(struct lruvec *lruvec, struct folio *folio, bool *skip),
++	TP_ARGS(lruvec, folio, skip));
+ DECLARE_HOOK(android_vh_add_lazyfree_bypass,
+ 	TP_PROTO(struct lruvec *lruvec, struct folio *folio, bool *bypass),
+ 	TP_ARGS(lruvec, folio, bypass));
+@@ -532,6 +549,18 @@
+ 	TP_PROTO(struct file *file, pgoff_t orig_start_pgoff,
+ 		pgoff_t last_pgoff, vm_fault_t ret),
+ 	TP_ARGS(file, orig_start_pgoff, last_pgoff, ret));
++DECLARE_HOOK(android_vh_folio_add_lru_folio_activate,
++	TP_PROTO(struct folio *folio, bool *bypass),
++	TP_ARGS(folio, bypass));
++DECLARE_HOOK(android_vh_filemap_fault_pre_folio_locked,
++	TP_PROTO(struct folio *folio),
++	TP_ARGS(folio));
++DECLARE_HOOK(android_vh_filemap_folio_mapped,
++	TP_PROTO(struct folio *folio),
++	TP_ARGS(folio));
++DECLARE_HOOK(android_vh_folio_remove_rmap_ptes,
++	TP_PROTO(struct folio *folio),
++	TP_ARGS(folio));
+ #endif /* _TRACE_HOOK_MM_H */
+ 
+ /* This part must be outside protection */
+--- a/include/trace/hooks/vmscan.h
++++ b/include/trace/hooks/vmscan.h
+@@ -12,6 +12,9 @@
+ DECLARE_RESTRICTED_HOOK(android_rvh_set_balance_anon_file_reclaim,
+ 			TP_PROTO(bool *balance_anon_file_reclaim),
+ 			TP_ARGS(balance_anon_file_reclaim), 1);
++DECLARE_RESTRICTED_HOOK(android_rvh_kswapd_shrink_node,
++			TP_PROTO(unsigned long *nr_reclaimed),
++			TP_ARGS(nr_reclaimed), 1);
+ DECLARE_HOOK(android_vh_tune_swappiness,
+ 	TP_PROTO(int *swappiness),
+ 	TP_ARGS(swappiness));
+@@ -24,6 +27,10 @@
+ DECLARE_HOOK(android_vh_do_shrink_slab,
+ 	TP_PROTO(struct shrinker *shrinker, long *freeable),
+ 	TP_ARGS(shrinker, freeable));
++DECLARE_HOOK(android_vh_do_shrink_slab_ex,
++	TP_PROTO(struct shrink_control *shrinkctl, struct shrinker *shrinker,
++                long *freeable, int priority),
++	TP_ARGS(shrinkctl, shrinker, freeable, priority));
+ DECLARE_HOOK(android_vh_throttle_direct_reclaim_bypass,
+ 	TP_PROTO(bool *bypass),
+ 	TP_ARGS(bypass));
+@@ -48,6 +55,15 @@
+ DECLARE_HOOK(android_vh_invalidate_mapping_pagevec,
+ 	TP_PROTO(struct address_space *mapping, bool *skip),
+ 	TP_ARGS(mapping, skip));
++DECLARE_HOOK(android_vh_keep_reclaimed_folio,
++	TP_PROTO(struct folio *folio, int refcount, bool *keep),
++	TP_ARGS(folio, refcount, keep));
++DECLARE_HOOK(android_vh_clear_reclaimed_folio,
++	TP_PROTO(struct folio *folio, bool reclaimed),
++	TP_ARGS(folio, reclaimed));
++DECLARE_HOOK(android_vh_evict_folios_bypass,
++	TP_PROTO(struct folio *folio, bool *bypass),
++	TP_ARGS(folio, bypass));
+ 
+ enum scan_balance;
+ DECLARE_HOOK(android_vh_tune_scan_type,
+--- a/include/trace/hooks/blk.h
++++ b/include/trace/hooks/blk.h
+@@ -45,6 +45,12 @@
+ 	TP_PROTO(struct request_queue *q, unsigned long delay, bool *skip),
+ 	TP_ARGS(q, delay, skip));
+ 
++struct bio;
++
++DECLARE_HOOK(android_vh_check_set_ioprio,
++	TP_PROTO(struct bio *bio),
++	TP_ARGS(bio));
++
+ #endif /* _TRACE_HOOK_BLK_H */
+ /* This part must be outside protection */
+ #include <trace/define_trace.h>
+--- a/include/trace/hooks/sched.h
++++ b/include/trace/hooks/sched.h
+@@ -434,6 +434,10 @@
+ 	TP_PROTO(void *unused),
+ 	TP_ARGS(unused));
+ 
++DECLARE_HOOK(android_vh_mmput_mm,
++	TP_PROTO(struct mm_struct *mm),
++	TP_ARGS(mm));
++
+ DECLARE_RESTRICTED_HOOK(android_rvh_attach_entity_load_avg,
+ 	TP_PROTO(struct cfs_rq *cfs_rq, struct sched_entity *se),
+ 	TP_ARGS(cfs_rq, se), 1);
+--- a/drivers/android/vendor_hooks.c
++++ b/drivers/android/vendor_hooks.c
+@@ -644,3 +644,19 @@
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_proactive_compact_wmark_high);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_trigger_vendor_lmk_kill);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_filemap_map_pages_range);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_check_set_ioprio);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_filemap_pages);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_lru_gen_add_folio_skip);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_lru_gen_del_folio_skip);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_perform_reclaim);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_kswapd_shrink_node);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_do_shrink_slab_ex);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_keep_reclaimed_folio);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_clear_reclaimed_folio);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_evict_folios_bypass);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_folio_add_lru_folio_activate);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_filemap_fault_pre_folio_locked);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_filemap_folio_mapped);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_folio_remove_rmap_ptes);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_do_madvise_bypass);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_do_traversal_lruvec_ex);
+--- a/kernel/sched/vendor_hooks.c
++++ b/kernel/sched/vendor_hooks.c
+@@ -110,6 +110,7 @@
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_reweight_entity);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_context_switch);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mmput);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mmput_mm);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_attach_entity_load_avg);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_detach_entity_load_avg);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_update_load_avg);
+--- a/mm/madvise.c
++++ b/mm/madvise.c
+@@ -1534,6 +1534,14 @@
+ 
+ SYSCALL_DEFINE3(madvise, unsigned long, start, size_t, len_in, int, behavior)
+ {
++	bool bypass = false;
++	int ret;
++
++	trace_android_rvh_do_madvise_bypass(current->mm, start,
++			len_in, behavior, &ret, &bypass);
++	if (bypass)
++		return ret;
++
+ 	return do_madvise(current->mm, start, len_in, behavior);
+ }
+ 
+--- a/mm/memcontrol.c
++++ b/mm/memcontrol.c
+@@ -1429,8 +1429,16 @@
+ 		memcg = mem_cgroup_iter(NULL, NULL, NULL);
+ 		do {
+ 			struct lruvec *lruvec = mem_cgroup_lruvec(memcg, pgdat);
++			bool stop = false;
+ 
+ 			trace_android_vh_do_traversal_lruvec(lruvec);
++
++			trace_android_rvh_do_traversal_lruvec_ex(memcg, lruvec,
++								 &stop);
++			if (stop) {
++				mem_cgroup_iter_break(NULL, memcg);
++				break;
++			}
+ 
+ 			memcg = mem_cgroup_iter(NULL, memcg, NULL);
+ 		} while (memcg);
+--- a/mm/page_alloc.c
++++ b/mm/page_alloc.c
+@@ -3927,6 +3927,7 @@
+ {
+ 	unsigned int noreclaim_flag;
+ 	unsigned long progress;
++	bool skip = false;
+ 
+ 	cond_resched();
+ 
+@@ -3935,9 +3936,14 @@
+ 	fs_reclaim_acquire(gfp_mask);
+ 	noreclaim_flag = memalloc_noreclaim_save();
+ 
++	trace_android_rvh_perform_reclaim(order, gfp_mask, ac->nodemask,
++					  &progress, &skip);
++	if (skip)
++		goto out;
++
+ 	progress = try_to_free_pages(ac->zonelist, order, gfp_mask,
+ 								ac->nodemask);
+-
++out:
+ 	memalloc_noreclaim_restore(noreclaim_flag);
+ 	fs_reclaim_release(gfp_mask);
+ 
+--- a/mm/vmscan.c
++++ b/mm/vmscan.c
+@@ -865,6 +865,7 @@
+ 
+ 	freeable = shrinker->count_objects(shrinker, shrinkctl);
+ 	trace_android_vh_do_shrink_slab(shrinker, &freeable);
++	trace_android_vh_do_shrink_slab_ex(shrinkctl, shrinker, &freeable, priority);
+ 	if (freeable == 0 || freeable == SHRINK_EMPTY)
+ 		return freeable;
+ 
+@@ -1478,8 +1479,15 @@
+ 		 * same address_space.
+ 		 */
+ 		if (reclaimed && folio_is_file_lru(folio) &&
+-		    !mapping_exiting(mapping) && !dax_mapping(mapping))
++		    !mapping_exiting(mapping) && !dax_mapping(mapping)) {
++			bool keep = false;
++
++			trace_android_vh_keep_reclaimed_folio(folio, refcount, &keep);
++			if (keep)
++				goto cannot_free;
+ 			shadow = workingset_eviction(folio, target_memcg);
++		}
++		trace_android_vh_clear_reclaimed_folio(folio, reclaimed);
+ 		__filemap_remove_folio(folio, shadow);
+ 		xa_unlock_irq(&mapping->i_pages);
+ 		if (mapping_shrinkable(mapping))
+@@ -5349,6 +5357,12 @@
+ 			type ? LRU_INACTIVE_FILE : LRU_INACTIVE_ANON);
+ 
+ 	list_for_each_entry_safe_reverse(folio, next, &list, lru) {
++		bool bypass = false;
++
++		trace_android_vh_evict_folios_bypass(folio, &bypass);
++		if (bypass)
++			continue;
++
+ 		if (!folio_evictable(folio)) {
+ 			list_del(&folio->lru);
+ 			folio_putback_lru(folio);
+@@ -7544,6 +7558,7 @@
+ 
+ 		sc->nr_to_reclaim += max(high_wmark_pages(zone), SWAP_CLUSTER_MAX);
+ 	}
++	trace_android_rvh_kswapd_shrink_node(&sc->nr_to_reclaim);
+ 
+ 	/*
+ 	 * Historically care was taken to put equal pressure on all zones but
+--- a/mm/filemap.c
++++ b/mm/filemap.c
+@@ -3426,6 +3426,8 @@
+ 		}
+ 	}
+ 
++	trace_android_vh_filemap_fault_pre_folio_locked(folio);
++
+ 	if (!lock_folio_maybe_drop_mmap(vmf, folio, &fpin))
+ 		goto out_retry;
+ 
+@@ -3717,6 +3719,8 @@
+ 		end = folio->index + folio_nr_pages(folio) - 1;
+ 		nr_pages = min(end, end_pgoff) - xas.xa_index + 1;
+ 
++		trace_android_vh_filemap_pages(folio);
++
+ 		if (!folio_test_large(folio))
+ 			ret |= filemap_map_order0_folio(vmf,
+ 					folio, addr, &mmap_miss);
+@@ -3726,6 +3730,7 @@
+ 					nr_pages, &mmap_miss);
+ 
+ 		folio_unlock(folio);
++		trace_android_vh_filemap_folio_mapped(folio);
+ 		folio_put(folio);
+ 	} while ((folio = next_uptodate_folio(&xas, mapping, end_pgoff)) != NULL);
+ 	pte_unmap_unlock(vmf->pte, vmf->ptl);
+--- a/mm/swap.c
++++ b/mm/swap.c
+@@ -504,8 +504,13 @@
+ 
+ 	/* see the comment in lru_gen_add_folio() */
+ 	if (lru_gen_enabled() && !folio_test_unevictable(folio) &&
+-	    lru_gen_in_fault() && !(current->flags & PF_MEMALLOC))
+-		folio_set_active(folio);
++	    lru_gen_in_fault() && !(current->flags & PF_MEMALLOC)) {
++		bool bypass = false;
++
++		trace_android_vh_folio_add_lru_folio_activate(folio, &bypass);
++		if (!bypass)
++			folio_set_active(folio);
++	}
+ 
+ 	folio_get(folio);
+ 	local_lock(&cpu_fbatches.lock);
+--- a/mm/rmap.c
++++ b/mm/rmap.c
+@@ -1616,6 +1616,8 @@
+ 		int nr_pages, struct vm_area_struct *vma)
+ {
+ 	__folio_remove_rmap(folio, page, nr_pages, vma, RMAP_LEVEL_PTE);
++
++	trace_android_vh_folio_remove_rmap_ptes(folio);
+ }
+ 
+ /**
+--- a/block/blk-mq.c
++++ b/block/blk-mq.c
+@@ -3031,6 +3031,8 @@
+ 	unsigned int nr_segs = 1;
+ 	blk_status_t ret;
+ 
++	trace_android_vh_check_set_ioprio(bio);
++
+ 	bio = blk_queue_bounce(bio, q);
+ 
+ 	if (plug) {
+--- a/kernel/fork.c
++++ b/kernel/fork.c
+@@ -1400,6 +1400,7 @@
+ 
+ 	if (atomic_dec_and_test(&mm->mm_users)) {
+ 		trace_android_vh_mmput(NULL);
++		trace_android_vh_mmput_mm(mm);
+ 		__mmput(mm);
+ 	}
+ }
+--- a/include/linux/mm_inline.h
++++ b/include/linux/mm_inline.h
+@@ -247,6 +247,11 @@
+ 	int type = folio_is_file_lru(folio);
+ 	int zone = folio_zonenum(folio);
+ 	struct lru_gen_folio *lrugen = &lruvec->lrugen;
++	bool skip = false;
++
++	trace_android_vh_lru_gen_add_folio_skip(lruvec, folio, &skip);
++	if (skip)
++		return true;
+ 
+ 	VM_WARN_ON_ONCE_FOLIO(gen != -1, folio);
+ 
+@@ -294,6 +299,11 @@
+ {
+ 	unsigned long flags;
+ 	int gen = folio_lru_gen(folio);
++	bool skip = false;
++
++	trace_android_vh_lru_gen_del_folio_skip(lruvec, folio, &skip);
++	if (skip)
++		return true;
+ 
+ 	if (gen < 0)
+ 		return false;

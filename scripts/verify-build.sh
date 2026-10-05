@@ -70,6 +70,11 @@ if [ "${USE_DROIDSPACES:-true}" = "true" ]; then
         || echo "::warning::ANDROID_KABI_RESERVE not =y; kABI padding may not be in effect"
 fi
 
+# Xiaomi OS4 vendor modules use an additive set of Android MM trace hooks.
+# Their declaration/call/export triplets are checked against the final Image in
+# the dedicated gate after this script, so a compile that silently omits one
+# cannot proceed to packaging.
+
 # 5. Root flavor consistency.
 case "${ROOT_FLAVOR:-}" in
   ksu-next|sukisu)
