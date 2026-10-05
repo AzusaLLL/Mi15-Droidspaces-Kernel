@@ -32,7 +32,7 @@ echo "==> patch dir:   $PATCH_DIR"
 # Report which slots upstream already consumed, for the build log.
 occupied="$(awk '/^struct task_struct \{/,/^\};/' "$SCHED" \
             | grep -oE 'ANDROID_KABI_USE2?\([0-9]+' \
-            | grep -oE '[0-9]+' | sort -un | tr '\n' ' ')"
+            | grep -oE '[0-9]+' | sort -un | tr '\n' ' ' || true)"
 echo "==> task_struct ANDROID_KABI slots already in use upstream: ${occupied:-none}"
 
 if grep -q 'ANDROID_KABI_USE(.*sysv_sem' "$SCHED"; then
@@ -79,7 +79,7 @@ else
     # field would be shared with a vendor module -> silent memory corruption.
     dupes="$(awk '/^struct task_struct \{/,/^\};/' "$SCHED" \
              | grep -oE 'ANDROID_KABI_USE2?\([0-9]+' | grep -oE '[0-9]+' \
-             | sort -n | uniq -d | tr '\n' ' ')"
+             | sort -n | uniq -d | tr '\n' ' ' || true)"
     if [ -n "$dupes" ]; then
         echo "::error::post-patch check failed: ANDROID_KABI slot(s) claimed twice: $dupes"
         echo "::error::patch landed on a slot upstream already uses -> silent ABI corruption"
