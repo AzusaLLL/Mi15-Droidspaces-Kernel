@@ -152,9 +152,9 @@ jobs:
           # Every input that changes generated code belongs in this key, otherwise a
           # stale object could be reused across differing configurations.
           key: >-
-            bazel-${{ inputs.kernel_tag }}-${{ steps.res.outputs.root_key }}-ds${{ inputs.use_droidspaces }}-susfs${{ inputs.use_susfs }}-kpm${{ inputs.use_kpm }}-${{ hashFiles('scripts/*.sh', 'patches/droidspaces/*') }}-${{ github.run_id }}
+            bazel-${{ inputs.kernel_tag }}-${{ steps.res.outputs.root_key }}-ds${{ inputs.use_droidspaces }}-susfs${{ inputs.use_susfs }}-kpm${{ inputs.use_kpm }}-${{ hashFiles('scripts/*.sh', 'patches/droidspaces/*', 'patches/erofs/*') }}-${{ github.run_id }}
           restore-keys: |
-            bazel-${{ inputs.kernel_tag }}-${{ steps.res.outputs.root_key }}-ds${{ inputs.use_droidspaces }}-susfs${{ inputs.use_susfs }}-kpm${{ inputs.use_kpm }}-${{ hashFiles('scripts/*.sh', 'patches/droidspaces/*') }}-
+            bazel-${{ inputs.kernel_tag }}-${{ steps.res.outputs.root_key }}-ds${{ inputs.use_droidspaces }}-susfs${{ inputs.use_susfs }}-kpm${{ inputs.use_kpm }}-${{ hashFiles('scripts/*.sh', 'patches/droidspaces/*', 'patches/erofs/*') }}-
             bazel-${{ inputs.kernel_tag }}-${{ steps.res.outputs.root_key }}-ds${{ inputs.use_droidspaces }}-susfs${{ inputs.use_susfs }}-kpm${{ inputs.use_kpm }}-
             bazel-${{ inputs.kernel_tag }}-${{ steps.res.outputs.root_key }}-
 
@@ -220,6 +220,22 @@ jobs:
           else
             echo "mirror already present, leaving as-is"
           fi
+
+      # Restore the Xiaomi stock-compatible EROFS/LZ4 in-place margin path.
+      # The 6.6.77 Wild image removed lz4asm.support and hard-coded +32; stock
+      # accepts the early parameter and uses +65 when it is enabled.
+      - name: Apply EROFS LZ4 in-place margin fix
+        run: |
+          set -eux
+          PATCH="$GITHUB_WORKSPACE/patches/erofs/001-lz4asm-margin.patch"
+          test -s "$PATCH"
+          git -C ~/gki/common apply --check "$PATCH"
+          git -C ~/gki/common apply "$PATCH"
+          grep -Fq 'early_param("lz4asm.support", z_erofs_get_lz4_decompress_inplace_margin);' \
+            ~/gki/common/fs/erofs/decompressor.c
+          grep -Fq 'z_erofs_lz4_inplace_margin65 ? 65 : 32' \
+            ~/gki/common/fs/erofs/decompressor.c
+          git -C ~/gki/common diff --check
 
       - name: Apply Droidspaces
         if: ${{ inputs.use_droidspaces }}
@@ -320,7 +336,7 @@ jobs:
         with:
           path: ~/.cache/bazel-disk
           key: >-
-            bazel-${{ inputs.kernel_tag }}-${{ steps.res.outputs.root_key }}-ds${{ inputs.use_droidspaces }}-susfs${{ inputs.use_susfs }}-kpm${{ inputs.use_kpm }}-${{ hashFiles('scripts/*.sh', 'patches/droidspaces/*') }}-${{ github.run_id }}
+            bazel-${{ inputs.kernel_tag }}-${{ steps.res.outputs.root_key }}-ds${{ inputs.use_droidspaces }}-susfs${{ inputs.use_susfs }}-kpm${{ inputs.use_kpm }}-${{ hashFiles('scripts/*.sh', 'patches/droidspaces/*', 'patches/erofs/*') }}-${{ github.run_id }}
 
       # Run-unique keys accumulate, and a repo only gets 10GB of cache before GitHub
       # starts evicting by LRU - which could evict the git mirror we want to keep.
